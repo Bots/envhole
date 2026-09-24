@@ -19,6 +19,8 @@ jobs:
           ENVHOLE_RENDEZVOUS_URL=ws://127.0.0.1:4000/v1
           ENVHOLE_TRANSIT_RELAY=tcp://127.0.0.1:4001
           cargo test --test network -- --ignored --nocapture
+      - if: failure()
+        run: docker compose -f deploy/server/compose.yml logs --no-color
       - if: always()
         run: docker compose -f deploy/server/compose.yml down --volumes
       - run: >-

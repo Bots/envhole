@@ -57,7 +57,17 @@ fn two_process_exact_byte_transfer() {
     let deadline = std::time::Instant::now() + Duration::from_secs(90);
     loop {
         if let Some(status) = receiver.0.try_wait().unwrap() {
-            assert!(status.success());
+            if !status.success() {
+                let mut stderr = String::new();
+                receiver
+                    .0
+                    .stderr
+                    .take()
+                    .unwrap()
+                    .read_to_string(&mut stderr)
+                    .unwrap();
+                panic!("receiver failed: {stderr}");
+            }
             break;
         }
         assert!(std::time::Instant::now() < deadline, "receiver timed out");
@@ -76,7 +86,17 @@ fn two_process_exact_byte_transfer() {
     assert!(!text.contains("synthetic-only"));
     loop {
         if let Some(status) = sender.0.try_wait().unwrap() {
-            assert!(status.success());
+            if !status.success() {
+                let mut stderr = String::new();
+                sender
+                    .0
+                    .stderr
+                    .take()
+                    .unwrap()
+                    .read_to_string(&mut stderr)
+                    .unwrap();
+                panic!("sender failed: {stderr}");
+            }
             break;
         }
         assert!(std::time::Instant::now() < deadline, "sender timed out");
