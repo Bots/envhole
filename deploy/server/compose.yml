@@ -1,0 +1,65 @@
+name: envhole-wormhole
+
+services:
+  mailbox:
+    build:
+      context: .
+      args:
+        SERVER_PACKAGE: magic-wormhole-mailbox-server==0.8.0
+    command:
+      - twist
+      - wormhole-mailbox
+      - --channel-db=/data/channels.sqlite
+      - --usage-db=/data/usage.sqlite
+      - --blur-usage=3600
+      - --port=tcp:4000
+    init: true
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    volumes:
+      - mailbox-data:/data
+    ports:
+      - "${MAILBOX_BIND:-0.0.0.0}:${MAILBOX_PORT:-4000}:4000/tcp"
+    healthcheck:
+      test: [CMD, python, -c, "import socket; socket.create_connection(('127.0.0.1',4000),2).close()"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 20s
+
+  transit-relay:
+    build:
+      context: .
+      args:
+        SERVER_PACKAGE: magic-wormhole-transit-relay==0.5.0
+    command:
+      - twist
+      - transitrelay
+      - --usage-db=/data/usage.sqlite
+      - --blur-usage=3600
+      - --port=tcp:4001
+    init: true
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    volumes:
+      - transit-data:/data
+    ports:
+      - "${RELAY_BIND:-0.0.0.0}:${RELAY_PORT:-4001}:4001/tcp"
+    healthcheck:
+      test: [CMD, python, -c, "import socket; socket.create_connection(('127.0.0.1',4001),2).close()"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 20s
+
+volumes:
+  mailbox-data:
+  transit-data:

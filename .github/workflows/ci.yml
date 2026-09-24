@@ -13,6 +13,14 @@ jobs:
       - run: cargo fmt --check
       - run: cargo clippy --locked --all-targets --all-features -- -D warnings
       - run: cargo test --locked --all-targets
+      - run: docker compose -f deploy/server/compose.yml config --quiet
+      - run: docker compose -f deploy/server/compose.yml up -d --build --wait
+      - run: >-
+          ENVHOLE_RENDEZVOUS_URL=ws://127.0.0.1:4000/v1
+          ENVHOLE_TRANSIT_RELAY=tcp://127.0.0.1:4001
+          cargo test --test network -- --ignored --nocapture
+      - if: always()
+        run: docker compose -f deploy/server/compose.yml down --volumes
       - run: >-
           cargo test --manifest-path vendor/magic-wormhole/Cargo.toml
           transit::transport::tests::oversized_transit_record_is_rejected_before_body_read

@@ -34,6 +34,18 @@ The example code is a placeholder; use the sender's generated code.
 Treat the code as a temporary secret. It is printed to stdout for sharing.
 Do not post it publicly.
 
+To use self-hosted infrastructure, configure both peers identically:
+
+```sh
+export ENVHOLE_RENDEZVOUS_URL=ws://PI_HOST:4000/v1
+export ENVHOLE_TRANSIT_RELAY=tcp://PI_HOST:4001
+envhole send .env
+```
+
+The equivalent global flags are `--rendezvous-url` and `--transit-relay`.
+A Raspberry Pi Docker Compose deployment is provided in
+[`deploy/server`](deploy/server/README.md).
+
 For automation:
 
 ```sh
@@ -70,7 +82,7 @@ approved saving them.
 * Existing targets require --force. Symlinks (including dangling links) and
   non-regular targets are refused. Use a trusted destination directory;
   protection against an attacker replacing parent directories is out of scope.
-* No folders, resume, stored history, relay configuration, or guaranteed
+* No folders, resume, stored history, or guaranteed
   cancellation cleanup on forced termination. Ctrl-C exits. A crash while
   saving may leave a private temporary file. Memory is not guaranteed zeroized.
 * Unix permissions are tested on Linux. Windows ACL guarantees are not provided.
@@ -79,10 +91,11 @@ approved saving them.
   records larger than 1 MiB are rejected before allocation. The upstream crate
   otherwise trusts a peer-controlled 32-bit record length. The patch has its own
   regression test and should be removed after an equivalent upstream release.
-* Uses the standard file-transfer application ID and public infrastructure.
-  Compatible peers can offer arbitrary files; EnvHole validates before saving.
-  Availability depends on that infrastructure. Connections may wait until
-  interrupted if a peer does not complete the handshake.
+* Uses the standard file-transfer application ID and defaults to public
+  infrastructure. Rendezvous and transit URLs can be replaced together for a
+  self-hosted deployment. Compatible peers can offer arbitrary files; EnvHole
+  validates before saving. Connections may wait until interrupted if a peer
+  does not complete the handshake.
 
 See [security policy](SECURITY.md), [threat model](docs/threat-model.md),
 and [protocol](docs/protocol.md).
@@ -96,14 +109,16 @@ cargo test --all-targets
 cargo test --manifest-path vendor/magic-wormhole/Cargo.toml \
   transit::transport::tests::oversized_transit_record_is_rejected_before_body_read -- --exact
 cargo audit
-# Public-network smoke test, synthetic payload only, bounded process waits:
+# Network smoke test, synthetic payload only, bounded process waits:
 cargo test --test network -- --ignored --nocapture
 ```
 
-The network test launches two actual envhole processes, checks masked output,
+The network test launches two actual envhole processes against the configured
+infrastructure, checks masked output,
 and compares original and saved bytes. It is ignored by default so offline CI
-does not rely on a public service. It was exercised successfully during v0.1
-development. Local tests cover parsing, limits, previews, CLI validation,
-confirmation refusal, symlink refusal, replacement, and Unix permissions. The
-suite currently contains 14 non-network tests plus the ignored public-network
-smoke test.
+does not rely on a public service. CI starts the Compose services and runs this
+test against them. It was also exercised successfully against the public
+service during v0.1 development. Local tests cover parsing, limits, previews,
+CLI validation, confirmation refusal, symlink refusal, replacement, and Unix
+permissions. The suite currently contains 15 non-network tests plus the
+opt-in network smoke test.
