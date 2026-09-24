@@ -12,6 +12,25 @@ fn help_describes_commands() {
     assert!(out.status.success());
     let text = String::from_utf8_lossy(&out.stdout);
     assert!(text.contains("send") && text.contains("receive"));
+    assert!(text.contains("--rendezvous-url") && text.contains("--transit-relay"));
+}
+
+#[test]
+fn invalid_server_urls_fail_before_reading_payload() {
+    let out = bin()
+        .args([
+            "--rendezvous-url",
+            "not-a-websocket-url",
+            "--transit-relay",
+            "not-a-relay-url",
+            "send",
+            "/path/that/does/not/exist",
+            "--yes",
+        ])
+        .output()
+        .unwrap();
+    assert!(!out.status.success());
+    assert!(String::from_utf8_lossy(&out.stderr).contains("invalid rendezvous URL"));
 }
 
 #[test]

@@ -1,4 +1,4 @@
-// Uses synthetic data only. Explicitly opt in to public infrastructure.
+// Uses synthetic data only. Explicitly opt in to configured network infrastructure.
 use std::{
     io::{BufRead, BufReader, Read, Write},
     process::{Child, Command, Stdio},
@@ -15,8 +15,8 @@ impl Drop for Process {
 }
 
 #[test]
-#[ignore = "requires public Magic Wormhole rendezvous/transit access"]
-fn public_two_process_exact_byte_transfer() {
+#[ignore = "requires Magic Wormhole rendezvous/transit access"]
+fn two_process_exact_byte_transfer() {
     let dir = tempfile::tempdir().unwrap();
     let output = dir.path().join("received");
     let payload = b"# smoke\r\nexport TOKEN='synthetic-only'\r\nEMPTY=\n";

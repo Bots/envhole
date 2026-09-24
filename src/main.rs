@@ -14,6 +14,22 @@ use std::{
 #[derive(Parser)]
 #[command(version, about = "Transfer .env secrets with Magic Wormhole")]
 struct Cli {
+    /// Magic Wormhole rendezvous WebSocket URL
+    #[arg(
+        long,
+        global = true,
+        env = "ENVHOLE_RENDEZVOUS_URL",
+        default_value = transport::DEFAULT_RENDEZVOUS_URL
+    )]
+    rendezvous_url: String,
+    /// Magic Wormhole transit relay URL (tcp://, ws://, or wss://)
+    #[arg(
+        long,
+        global = true,
+        env = "ENVHOLE_TRANSIT_RELAY",
+        default_value = transport::DEFAULT_TRANSIT_RELAY
+    )]
+    transit_relay: String,
     #[command(subcommand)]
     command: Commands,
 }
@@ -57,6 +73,7 @@ fn confirm(yes: bool, stdin_payload: bool) -> Result<()> {
 }
 
 async fn run(cli: Cli) -> Result<()> {
+    let transport = transport::Config::new(&cli.rendezvous_url, &cli.transit_relay)?;
     match cli.command {
         Commands::Send { path, yes } => {
             let stdin_payload = path.as_os_str() == "-";
@@ -71,7 +88,7 @@ async fn run(cli: Cli) -> Result<()> {
             print!("{}", preview(&manifest(&bytes)?));
             io::stdout().flush()?;
             confirm(yes, stdin_payload)?;
-            transport::send(&bytes).await?;
+            transport::send(&bytes, &transport).await?;
         }
         Commands::Receive {
             code,
@@ -80,7 +97,7 @@ async fn run(cli: Cli) -> Result<()> {
             force,
         } => {
             check_target(&output, force)?;
-            let bytes = transport::receive(&code).await?;
+            let bytes = transport::receive(&code, &transport).await?;
             envhole::save_received(&bytes, &output, force, |names| {
                 print!("{}", preview(names));
                 io::stdout().flush()?;
