@@ -1,0 +1,18 @@
+[package]
+name = "envhole"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+description = "Transfer environment secrets with Magic Wormhole"
+
+[dependencies]
+anyhow = "1.0.104"
+clap = { version = "4.6.7", features = ["derive"] }
+futures-lite = "2.6.1"
+magic-wormhole = "0.8.1"
+tempfile = "3.27.0"
+
+[patch.crates-io]
+# Upstream 0.8.1 allocates peer-declared transit frames before applying an
+# application sink limit. This audited local patch rejects frames above 1 MiB.
+magic-wormhole = { path = "vendor/magic-wormhole" }

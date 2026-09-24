@@ -1,0 +1,8 @@
+/target/
+**/target/
+.serena/
+.env
+.env.*
+!.env.example
+*.core
+/core
