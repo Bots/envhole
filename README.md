@@ -13,6 +13,34 @@ cargo build --release --locked
 # binary: target/release/envhole
 ```
 
+## Install a release
+
+Tagged releases publish native Linux archives for x86-64 workstations and
+ARM64 systems such as a 64-bit Raspberry Pi. For this private repository, use
+an authenticated GitHub CLI to download the matching archive:
+
+```sh
+VERSION=v0.1.0
+TARGET=aarch64-unknown-linux-musl # use x86_64-unknown-linux-musl on an Intel/AMD PC
+gh release download "$VERSION" \
+  --repo Bots/envhole \
+  --pattern "envhole-$VERSION-$TARGET.tar.gz*"
+sha256sum --check "envhole-$VERSION-$TARGET.tar.gz.sha256"
+tar -xzf "envhole-$VERSION-$TARGET.tar.gz"
+mkdir -p "$HOME/.local/bin"
+install -m 0755 "envhole-$VERSION-$TARGET/envhole" "$HOME/.local/bin/envhole"
+envhole --version
+```
+
+Ensure `$HOME/.local/bin` is on `PATH`. The release binaries are statically
+linked so they do not depend on the Linux distribution's glibc version.
+
+Release creation is fail-closed: the tag must be exactly `vMAJOR.MINOR.PATCH`,
+its version must match `Cargo.toml`, both native builds and smoke tests must
+pass, and downloaded artifacts are checksum-verified before publication.
+Published releases and tags are immutable, and GitHub generates a signed
+release attestation that can be checked with `gh release verify`.
+
 ## Two terminals (or two machines)
 
 Sender:
