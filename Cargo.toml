@@ -7,10 +7,11 @@ description = "Transfer environment secrets with Magic Wormhole"
 
 [dependencies]
 anyhow = "1.0.104"
-clap = { version = "4.6.7", features = ["derive"] }
+clap = { version = "4.6.7", features = ["derive", "env"] }
 futures-lite = "2.6.1"
 magic-wormhole = "0.8.1"
 tempfile = "3.27.0"
+url = "2.5.8"
 
 [patch.crates-io]
 # Upstream 0.8.1 allocates peer-declared transit frames before applying an
