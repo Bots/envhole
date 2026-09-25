@@ -20,7 +20,12 @@ Sender:
 ```sh
 envhole send .env
 # Displays variable names with *** and a count.
-# Confirm with y, then share the printed Code privately.
+# Confirm with y. The result includes both the temporary code and a complete
+# receiver command carrying the same rendezvous and transit configuration:
+#
+# Code: 7-example-words
+# Receive command:
+# ENVHOLE_RENDEZVOUS_URL='ws://server:4000/v1' ENVHOLE_TRANSIT_RELAY='tcp://server:4001' envhole receive '7-example-words' --output .env.received
 ```
 
 Receiver:
@@ -32,7 +37,12 @@ envhole receive 7-example-words --output .env.received
 
 The example code is a placeholder; use the sender's generated code.
 Treat the code as a temporary secret. It is printed to stdout for sharing.
-Do not post it publicly.
+Do not post it publicly. The generated command contains that code and may be
+saved in the receiver's shell history; use it only on the intended receiver
+and remove the history entry if that matters for your threat model. The command
+uses POSIX-shell quoting (Bash, Zsh, Dash, and similar shells). The generated
+`.env.received` destination still refuses an existing file unless the receiver
+deliberately adds `--force`.
 
 To use self-hosted infrastructure, configure both peers identically:
 
