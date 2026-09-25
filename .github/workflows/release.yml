@@ -27,6 +27,8 @@ jobs:
           - runner: ubuntu-24.04-arm
             target: aarch64-unknown-linux-musl
     runs-on: ${{ matrix.runner }}
+    env:
+      RUSTUP_TOOLCHAIN: 1.98.1
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
