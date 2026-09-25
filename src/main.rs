@@ -103,7 +103,11 @@ async fn run(cli: Cli) -> Result<()> {
                 confirm(yes, false, "Save this protected payload?")?;
                 Ok(true)
             })?;
-            ui::success(&format!("Saved privately to {}", output.display()));
+            ui::complete(
+                "SAVED",
+                &format!("Saved {}", ui::format_bytes(payload_size)),
+                &format!("Validated .env · {}", output.display()),
+            );
         }
     }
     Ok(())

@@ -49,8 +49,9 @@ Sender:
 envhole send .env
 # Renders a protected payload card with masked values and byte size.
 # Confirm with y. EnvHole then logs rendezvous, peer authentication, encrypted
-# channel setup, direct/relay selection, byte verification, and delivery.
-# The result includes both the temporary code and a complete receiver command:
+# channel setup, direct/relay selection, live byte progress, verification, and a
+# compact transfer receipt. The result includes both the temporary code and a
+# complete receiver command:
 #
 # Code: 7-example-words
 # ╭─ COPY ON THE RECEIVING MACHINE
