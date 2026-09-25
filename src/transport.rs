@@ -77,6 +77,7 @@ pub async fn send(bytes: &[u8], config: &Config) -> Result<()> {
         .map_err(|_| anyhow!("wormhole connection or authentication failed"))?;
     ui::secure("Peer authenticated · encrypted channel established");
     ui::step("Negotiating a direct connection or encrypted relay…");
+    let mut progress = ui::TransferProgress::sending();
     transfer::send_file(
         wormhole,
         config.relays.clone(),
@@ -85,15 +86,16 @@ pub async fn send(bytes: &[u8], config: &Config) -> Result<()> {
         bytes.len() as u64,
         transit::Abilities::ALL,
         |info| ui::success(&format!("Transit connected {}", info.conn_type)),
-        |_, _| {},
+        move |current, total| progress.update(current, total),
         pending(),
     )
     .await
     .map_err(|_| anyhow!("encrypted transfer failed"))?;
-    ui::success(&format!(
-        "Delivered {} through the encrypted channel",
-        ui::format_bytes(bytes.len())
-    ));
+    ui::complete(
+        "TRANSFER COMPLETE",
+        &format!("Sent {}", ui::format_bytes(bytes.len())),
+        "Peer received the exact bytes · encrypted end to end",
+    );
     Ok(())
 }
 
@@ -126,10 +128,11 @@ pub async fn receive(code: &str, config: &Config) -> Result<Vec<u8>> {
     ui::output_block(&ui::encrypted_payload_notice(expected as usize));
     let mut buffer = BoundedBuffer::with_limit(expected as usize)?;
     ui::step("Receiving and verifying encrypted bytes…");
+    let mut progress = ui::TransferProgress::receiving();
     request
         .accept(
             |info| ui::success(&format!("Transit connected {}", info.conn_type)),
-            |_, _| {},
+            move |current, total| progress.update(current, total),
             &mut buffer,
             pending(),
         )
