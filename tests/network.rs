@@ -33,12 +33,13 @@ fn two_process_exact_byte_transfer() {
     let stdout = sender.0.stdout.take().unwrap();
     let (tx, rx) = mpsc::channel();
     std::thread::spawn(move || {
+        let mut code_sent = false;
         for line in BufReader::new(stdout).lines() {
             let line = line.unwrap();
             assert!(!line.contains("synthetic-only"));
-            if let Some(code) = line.strip_prefix("Code: ") {
+            if !code_sent && let Some(code) = line.strip_prefix("Code: ") {
                 tx.send(code.to_owned()).unwrap();
-                return;
+                code_sent = true;
             }
         }
     });
