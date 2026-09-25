@@ -2,14 +2,12 @@
 #![deny(warnings)]
 
 mod transport;
+mod ui;
 
 use anyhow::{Result, bail};
 use clap::{Parser, Subcommand};
-use envhole::{check_target, manifest, preview, read_confirmation, read_payload};
-use std::{
-    io::{self, Write},
-    path::PathBuf,
-};
+use envhole::{check_target, manifest, read_confirmation, read_payload};
+use std::{io, path::PathBuf};
 
 #[derive(Parser)]
 #[command(version, about = "Transfer .env secrets with Magic Wormhole")]
@@ -57,15 +55,14 @@ enum Commands {
     },
 }
 
-fn confirm(yes: bool, stdin_payload: bool) -> Result<()> {
+fn confirm(yes: bool, stdin_payload: bool, message: &str) -> Result<()> {
     if yes {
         return Ok(());
     }
     if stdin_payload {
         bail!("stdin payload requires --yes");
     }
-    eprint!("Continue? [y/N] ");
-    io::stderr().flush()?;
+    ui::prompt(message)?;
     if !read_confirmation(io::stdin().lock())? {
         bail!("cancelled");
     }
@@ -85,9 +82,10 @@ async fn run(cli: Cli) -> Result<()> {
                         .map_err(|_| anyhow::anyhow!("could not open input"))?,
                 )?
             };
-            print!("{}", preview(&manifest(&bytes)?));
-            io::stdout().flush()?;
-            confirm(yes, stdin_payload)?;
+            let names = manifest(&bytes)?;
+            ui::banner("Secure send");
+            ui::payload_preview(&names, bytes.len());
+            confirm(yes, stdin_payload, "Send this protected payload?")?;
             transport::send(&bytes, &transport).await?;
         }
         Commands::Receive {
@@ -97,13 +95,15 @@ async fn run(cli: Cli) -> Result<()> {
             force,
         } => {
             check_target(&output, force)?;
+            ui::banner("Secure receive");
             let bytes = transport::receive(&code, &transport).await?;
+            let payload_size = bytes.len();
             envhole::save_received(&bytes, &output, force, |names| {
-                print!("{}", preview(names));
-                io::stdout().flush()?;
-                confirm(yes, false)?;
+                ui::payload_preview(names, payload_size);
+                confirm(yes, false, "Save this protected payload?")?;
                 Ok(true)
             })?;
+            ui::success(&format!("Saved privately to {}", output.display()));
         }
     }
     Ok(())

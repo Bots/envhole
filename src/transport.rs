@@ -1,7 +1,8 @@
+use crate::ui;
 use anyhow::{Result, anyhow, bail};
 use envhole::{BoundedBuffer, MAX_PAYLOAD};
 use magic_wormhole::{AppConfig, MailboxConnection, Wormhole, transfer, transit};
-use std::{borrow::Cow, future::pending, io::Write};
+use std::{borrow::Cow, future::pending};
 
 pub const DEFAULT_RENDEZVOUS_URL: &str = magic_wormhole::rendezvous::DEFAULT_RENDEZVOUS_SERVER;
 pub const DEFAULT_TRANSIT_RELAY: &str = transit::DEFAULT_RELAY_SERVER;
@@ -61,16 +62,21 @@ fn shell_quote(value: &str) -> String {
 
 // Do not expose library errors: peer-controlled messages can contain secret text.
 pub async fn send(bytes: &[u8], config: &Config) -> Result<()> {
+    ui::step("Connecting to the rendezvous server…");
     let mailbox = MailboxConnection::create(config.app.clone(), 2)
         .await
         .map_err(|_| anyhow!("could not create rendezvous connection"))?;
     let code = mailbox.code().to_string();
-    println!("Code: {code}");
-    println!("Receive command:\n{}", config.receive_command(&code));
-    std::io::stdout().flush()?;
+    ui::success("One-time code created");
+    ui::plain(&format!("Code: {code}"));
+    ui::output_block(&ui::receiver_command_box(&config.receive_command(&code)));
+    ui::output_block(&ui::encrypted_payload_notice(bytes.len()));
+    ui::step("Waiting for the receiving machine…");
     let wormhole = Wormhole::connect(mailbox)
         .await
         .map_err(|_| anyhow!("wormhole connection or authentication failed"))?;
+    ui::secure("Peer authenticated · encrypted channel established");
+    ui::step("Negotiating a direct connection or encrypted relay…");
     transfer::send_file(
         wormhole,
         config.relays.clone(),
@@ -78,23 +84,31 @@ pub async fn send(bytes: &[u8], config: &Config) -> Result<()> {
         "envhole.env",
         bytes.len() as u64,
         transit::Abilities::ALL,
-        |_| {},
+        |info| ui::success(&format!("Transit connected {}", info.conn_type)),
         |_, _| {},
         pending(),
     )
     .await
     .map_err(|_| anyhow!("encrypted transfer failed"))?;
+    ui::success(&format!(
+        "Delivered {} through the encrypted channel",
+        ui::format_bytes(bytes.len())
+    ));
     Ok(())
 }
 
 pub async fn receive(code: &str, config: &Config) -> Result<Vec<u8>> {
     let code = code.parse().map_err(|_| anyhow!("invalid wormhole code"))?;
+    ui::step("Joining the rendezvous with the one-time code…");
     let mailbox = MailboxConnection::connect(config.app.clone(), code, false)
         .await
         .map_err(|_| anyhow!("could not join rendezvous; check code and network"))?;
+    ui::success("Rendezvous joined");
     let wormhole = Wormhole::connect(mailbox)
         .await
         .map_err(|_| anyhow!("wormhole connection or authentication failed"))?;
+    ui::secure("Sender authenticated · encrypted channel established");
+    ui::step("Waiting for the encrypted file offer…");
     let request = transfer::request_file(
         wormhole,
         config.relays.clone(),
@@ -109,15 +123,26 @@ pub async fn receive(code: &str, config: &Config) -> Result<Vec<u8>> {
         let _ = request.reject().await;
         bail!("payload exceeds 1 MiB limit");
     }
+    ui::output_block(&ui::encrypted_payload_notice(expected as usize));
     let mut buffer = BoundedBuffer::with_limit(expected as usize)?;
+    ui::step("Receiving and verifying encrypted bytes…");
     request
-        .accept(|_| {}, |_, _| {}, &mut buffer, pending())
+        .accept(
+            |info| ui::success(&format!("Transit connected {}", info.conn_type)),
+            |_, _| {},
+            &mut buffer,
+            pending(),
+        )
         .await
         .map_err(|_| anyhow!("encrypted transfer failed (payload limit 1 MiB)"))?;
     let bytes = buffer.into_bytes();
     if bytes.len() as u64 != expected {
         bail!("payload length mismatch");
     }
+    ui::success(&format!(
+        "Received and verified {} from the encrypted channel",
+        ui::format_bytes(bytes.len())
+    ));
     Ok(bytes)
 }
 

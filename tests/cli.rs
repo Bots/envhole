@@ -76,7 +76,7 @@ fn decline_sender_before_network() {
         String::from_utf8_lossy(&out.stdout),
         String::from_utf8_lossy(&out.stderr)
     );
-    assert!(text.contains("A=***") && text.contains("cancelled"));
+    assert!(text.contains("A=••••••••") && text.contains("cancelled"));
     assert!(!text.contains("unique-secret-value"));
 }
 

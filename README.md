@@ -19,13 +19,15 @@ Sender:
 
 ```sh
 envhole send .env
-# Displays variable names with *** and a count.
-# Confirm with y. The result includes both the temporary code and a complete
-# receiver command carrying the same rendezvous and transit configuration:
+# Renders a protected payload card with masked values and byte size.
+# Confirm with y. EnvHole then logs rendezvous, peer authentication, encrypted
+# channel setup, direct/relay selection, byte verification, and delivery.
+# The result includes both the temporary code and a complete receiver command:
 #
 # Code: 7-example-words
-# Receive command:
-# ENVHOLE_RENDEZVOUS_URL='ws://server:4000/v1' ENVHOLE_TRANSIT_RELAY='tcp://server:4001' envhole receive '7-example-words' --output .env.received
+# ╭─ COPY ON THE RECEIVING MACHINE
+# │ ENVHOLE_RENDEZVOUS_URL='ws://server:4000/v1' ENVHOLE_TRANSIT_RELAY='tcp://server:4001' envhole receive '7-example-words' --output .env.received
+# ╰─
 ```
 
 Receiver:

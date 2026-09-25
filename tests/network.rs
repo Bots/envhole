@@ -83,7 +83,7 @@ fn two_process_exact_byte_transfer() {
         .unwrap()
         .read_to_string(&mut text)
         .unwrap();
-    assert!(text.contains("2 variables") && text.contains("TOKEN=***"));
+    assert!(text.contains("2 variables") && text.contains("TOKEN=••••••••"));
     assert!(!text.contains("synthetic-only"));
     loop {
         if let Some(status) = sender.0.try_wait().unwrap() {
