@@ -1,6 +1,6 @@
 # Protocol
 
-EnvHole 0.1 uses a vendored magic-wormhole 0.8.1 with the crate's standard
+EnvHole 0.2 uses a vendored magic-wormhole 0.8.1 with the crate's standard
 `transfer::APP_CONFIG`, default rendezvous, default transit relay hint, and
 `transit::Abilities::ALL`. Direct transit may be selected when reachable;
 otherwise the public transit relay is available. It uses the stable v1 file
@@ -11,8 +11,9 @@ cryptographic code is changed.
 
 1. Sender reads at most 1 MiB plus one sentinel byte, validates metadata,
    displays only names/count, and obtains approval.
-2. `MailboxConnection::create(APP_CONFIG, 2)` allocates a nameplate and two-word
-   password. The sender prints the resulting short code.
+2. `MailboxConnection::create` allocates a nameplate and a password containing
+   four random PGP words by default. Each word contributes 8 bits. Senders may
+   select 2–6 words with `--code-words`; the sender prints the resulting code.
 3. Receiver connects to that code without allocating a new nameplate.
    `Wormhole::connect` on each side performs the crate's protocol handshake.
 4. Sender calls `transfer::send_file` with constant filename `envhole.env`,

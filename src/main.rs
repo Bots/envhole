@@ -40,6 +40,13 @@ enum Commands {
         /// Confirm sending without prompting
         #[arg(long)]
         yes: bool,
+        /// Number of random words in the one-time code
+        #[arg(
+            long,
+            default_value_t = transport::DEFAULT_CODE_WORDS,
+            value_parser = clap::value_parser!(u8).range(2..=6)
+        )]
+        code_words: u8,
     },
     /// Receive, preview names, then atomically save the payload
     Receive {
@@ -72,7 +79,11 @@ fn confirm(yes: bool, stdin_payload: bool, message: &str) -> Result<()> {
 async fn run(cli: Cli) -> Result<()> {
     let transport = transport::Config::new(&cli.rendezvous_url, &cli.transit_relay)?;
     match cli.command {
-        Commands::Send { path, yes } => {
+        Commands::Send {
+            path,
+            yes,
+            code_words,
+        } => {
             let stdin_payload = path.as_os_str() == "-";
             let bytes = if stdin_payload {
                 read_payload(io::stdin().lock())?
@@ -86,7 +97,7 @@ async fn run(cli: Cli) -> Result<()> {
             ui::banner("Secure send");
             ui::payload_preview(&names, bytes.len());
             confirm(yes, stdin_payload, "Send this protected payload?")?;
-            transport::send(&bytes, &transport).await?;
+            transport::send(&bytes, &transport, code_words).await?;
         }
         Commands::Receive {
             code,

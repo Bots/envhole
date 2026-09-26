@@ -16,6 +16,30 @@ fn help_describes_commands() {
 }
 
 #[test]
+fn send_defaults_to_four_code_words_and_bounds_overrides() {
+    let help = bin().args(["send", "--help"]).output().unwrap();
+    assert!(help.status.success());
+    let text = String::from_utf8_lossy(&help.stdout);
+    assert!(text.contains("--code-words"));
+    assert!(text.contains("default: 4"));
+
+    for invalid in ["1", "7"] {
+        let out = bin()
+            .args([
+                "send",
+                "/path/that/does/not/exist",
+                "--code-words",
+                invalid,
+                "--yes",
+            ])
+            .output()
+            .unwrap();
+        assert!(!out.status.success());
+        assert!(String::from_utf8_lossy(&out.stderr).contains("2..=6"));
+    }
+}
+
+#[test]
 fn invalid_server_urls_fail_before_reading_payload() {
     let out = bin()
         .args([
