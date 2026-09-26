@@ -93,6 +93,48 @@ ENVHOLE_INSTALL_DIR="$INSTALL_DIR" \
 sh "$ROOT/install.sh" >/dev/null
 [ "$("$INSTALL_DIR/envhole" --version)" = 'envhole 0.1.0' ]
 
+MAC_PACKAGE=envhole-v0.1.0-aarch64-apple-darwin
+MAC_ARCHIVE=$MAC_PACKAGE.tar.gz
+REAL_MV=$(command -v mv)
+mkdir -p "$FIXTURES/$MAC_PACKAGE" "$TMP_ROOT/mac-install"
+cp "$FIXTURES/$PACKAGE/envhole" "$FIXTURES/$MAC_PACKAGE/envhole"
+tar -C "$FIXTURES" -czf "$FIXTURES/$MAC_ARCHIVE" "$MAC_PACKAGE"
+(
+  cd "$FIXTURES"
+  sha256sum "$MAC_ARCHIVE" > "$MAC_ARCHIVE.sha256"
+)
+cat > "$MOCK_BIN/uname" <<'SCRIPT'
+#!/bin/sh
+case "${1:-}" in
+  -s) printf '%s\n' Darwin ;;
+  -m) printf '%s\n' arm64 ;;
+  *) exit 2 ;;
+esac
+SCRIPT
+cat > "$MOCK_BIN/mv" <<'SCRIPT'
+#!/bin/sh
+[ "${1:-}" = '-fh' ] || exit 2
+shift
+exec "$ENVHOLE_TEST_REAL_MV" -fT -- "$@"
+SCRIPT
+chmod 0755 "$MOCK_BIN/mv"
+PATH="$MOCK_BIN:$PATH" \
+ENVHOLE_TEST_FIXTURES="$FIXTURES" \
+ENVHOLE_TEST_REAL_MV="$REAL_MV" \
+ENVHOLE_VERSION=v0.1.0 \
+ENVHOLE_INSTALL_DIR="$TMP_ROOT/mac-install" \
+sh "$ROOT/install.sh" >/dev/null
+[ "$("$TMP_ROOT/mac-install/envhole" --version)" = 'envhole 0.1.0' ]
+cat > "$MOCK_BIN/uname" <<'SCRIPT'
+#!/bin/sh
+case "${1:-}" in
+  -s) printf '%s\n' Linux ;;
+  -m) printf '%s\n' x86_64 ;;
+  *) exit 2 ;;
+esac
+SCRIPT
+rm -f "$MOCK_BIN/mv"
+
 rm -f "$INSTALL_DIR/envhole"
 mkdir "$INSTALL_DIR/envhole"
 if PATH="$MOCK_BIN:$PATH" \

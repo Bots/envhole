@@ -1,4 +1,4 @@
-# EnvHole 0.1
+# EnvHole
 
 A small Rust CLI for transferring one UTF-8 .env payload using
 [magic-wormhole](https://docs.rs/magic-wormhole/0.8.1/magic_wormhole/).
@@ -6,7 +6,8 @@ No accounts, telemetry, analytics, secret database, or custom cryptography.
 
 ## Install
 
-On x86-64 or ARM64 Linux, install the latest published release to
+On Intel/Apple Silicon macOS or x86-64/ARM64 Linux, install the latest
+published release to
 `$HOME/.local/bin`:
 
 ```sh
@@ -34,7 +35,7 @@ to verify GitHub's release attestation independently.
 Pin a release or choose another destination when running a downloaded copy:
 
 ```sh
-ENVHOLE_VERSION=v0.1.0 ENVHOLE_INSTALL_DIR=/usr/local/bin sh ./install.sh
+ENVHOLE_VERSION=v0.2.0 ENVHOLE_INSTALL_DIR=/usr/local/bin sh ./install.sh
 ```
 
 The destination must be writable; the installer does not invoke `sudo`.
@@ -51,28 +52,35 @@ cargo build --release --locked
 
 ## Install a release manually
 
-Tagged releases publish native Linux archives for x86-64 workstations and
-ARM64 systems such as a 64-bit Raspberry Pi. Use the GitHub CLI to download
-the matching archive manually:
+Tagged releases publish native macOS archives for Intel and Apple Silicon plus
+Linux archives for x86-64 workstations and ARM64 systems such as a 64-bit
+Raspberry Pi. Use the GitHub CLI to download the matching archive manually:
 
 ```sh
-VERSION=v0.1.0
-TARGET=aarch64-unknown-linux-musl # use x86_64-unknown-linux-musl on an Intel/AMD PC
+VERSION=v0.2.0
+TARGET=aarch64-apple-darwin # Apple Silicon; see the target list below
 gh release download "$VERSION" \
   --repo Bots/envhole \
   --pattern "envhole-$VERSION-$TARGET.tar.gz*"
-sha256sum --check "envhole-$VERSION-$TARGET.tar.gz.sha256"
+if command -v sha256sum >/dev/null 2>&1; then
+  sha256sum --check "envhole-$VERSION-$TARGET.tar.gz.sha256"
+else
+  shasum -a 256 -c "envhole-$VERSION-$TARGET.tar.gz.sha256"
+fi
 tar -xzf "envhole-$VERSION-$TARGET.tar.gz"
 mkdir -p "$HOME/.local/bin"
 install -m 0755 "envhole-$VERSION-$TARGET/envhole" "$HOME/.local/bin/envhole"
 envhole --version
 ```
 
-Ensure `$HOME/.local/bin` is on `PATH`. The release binaries are statically
-linked so they do not depend on the Linux distribution's glibc version.
+Ensure `$HOME/.local/bin` is on `PATH`. Linux release binaries are statically
+linked so they do not depend on the distribution's glibc version. Available
+targets are
+`aarch64-apple-darwin`, `x86_64-apple-darwin`,
+`aarch64-unknown-linux-musl`, and `x86_64-unknown-linux-musl`.
 
 Release creation is fail-closed: the tag must be exactly `vMAJOR.MINOR.PATCH`,
-its version must match `Cargo.toml`, both native builds and smoke tests must
+its version must match `Cargo.toml`, all four native builds and smoke tests must
 pass, and downloaded artifacts are checksum-verified before publication.
 Published releases and tags are immutable, and GitHub generates a signed
 release attestation that can be checked with `gh release verify`.

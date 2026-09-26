@@ -27,6 +27,10 @@ jobs:
             target: x86_64-unknown-linux-musl
           - runner: ubuntu-24.04-arm
             target: aarch64-unknown-linux-musl
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+          - runner: macos-15
+            target: aarch64-apple-darwin
     runs-on: ${{ matrix.runner }}
     env:
       RUSTUP_TOOLCHAIN: 1.98.1
@@ -39,6 +43,7 @@ jobs:
           toolchain: 1.98.1
           targets: ${{ matrix.target }}
       - name: Install static-linker toolchain
+        if: endsWith(matrix.target, 'linux-musl')
         run: |
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends musl-tools
@@ -77,10 +82,11 @@ jobs:
             "stage/$archive/envhole"
           install -m 0644 README.md LICENSE SECURITY.md "stage/$archive/"
           tar -C stage -czf "dist/$archive.tar.gz" "$archive"
-          (
-            cd dist
-            sha256sum "$archive.tar.gz" > "$archive.tar.gz.sha256"
-          )
+          if command -v sha256sum >/dev/null 2>&1; then
+            (cd dist && sha256sum "$archive.tar.gz" > "$archive.tar.gz.sha256")
+          else
+            (cd dist && shasum -a 256 "$archive.tar.gz" > "$archive.tar.gz.sha256")
+          fi
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: release-${{ matrix.target }}
@@ -123,8 +129,12 @@ jobs:
           install -m 0644 install.sh dist/install.sh
           cd dist
           declare -A expected=(
+            ["envhole-$GITHUB_REF_NAME-aarch64-apple-darwin.tar.gz"]=1
+            ["envhole-$GITHUB_REF_NAME-aarch64-apple-darwin.tar.gz.sha256"]=1
             ["envhole-$GITHUB_REF_NAME-aarch64-unknown-linux-musl.tar.gz"]=1
             ["envhole-$GITHUB_REF_NAME-aarch64-unknown-linux-musl.tar.gz.sha256"]=1
+            ["envhole-$GITHUB_REF_NAME-x86_64-apple-darwin.tar.gz"]=1
+            ["envhole-$GITHUB_REF_NAME-x86_64-apple-darwin.tar.gz.sha256"]=1
             ["envhole-$GITHUB_REF_NAME-x86_64-unknown-linux-musl.tar.gz"]=1
             ["envhole-$GITHUB_REF_NAME-x86_64-unknown-linux-musl.tar.gz.sha256"]=1
             ["install.sh"]=1

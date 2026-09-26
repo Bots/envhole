@@ -1,8 +1,9 @@
 # Releasing EnvHole
 
 Releases are built by GitHub Actions from an annotated semantic-version tag on
-`main`. The workflow publishes statically linked Linux archives for x86-64 and
-ARM64 together with a SHA-256 checksum for each archive and the public
+`main`. The workflow publishes native macOS archives for Intel and Apple
+Silicon plus statically linked Linux archives for x86-64 and ARM64, together
+with a SHA-256 checksum for each archive and the public
 `install.sh` bootstrapper. Repository release
 immutability must remain enabled so published tags, assets, and automatically
 generated release attestations cannot be replaced.
@@ -23,13 +24,13 @@ cargo build --release --locked
 
 ## Publish
 
-For version `0.1.0`:
+For version `0.2.0`:
 
 ```sh
 git switch main
 git pull --ff-only origin main
-git tag -a v0.1.0 -m "EnvHole v0.1.0"
-git push origin v0.1.0
+git tag -a v0.2.0 -m "EnvHole v0.2.0"
+git push origin v0.2.0
 ```
 
 The release workflow rejects malformed tags and tags that do not match the
@@ -40,12 +41,16 @@ creates the GitHub release with generated release notes.
 Verify the result rather than trusting the workflow exit status:
 
 ```sh
-gh release view v0.1.0 --repo Bots/envhole
-gh release verify v0.1.0 --repo Bots/envhole
-gh release download v0.1.0 --repo Bots/envhole --dir /tmp/envhole-release
+gh release view v0.2.0 --repo Bots/envhole
+gh release verify v0.2.0 --repo Bots/envhole
+gh release download v0.2.0 --repo Bots/envhole --dir /tmp/envhole-release
 (
   cd /tmp/envhole-release
-  sha256sum --check --strict ./*.sha256
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum --check --strict ./*.sha256
+  else
+    shasum -a 256 -c ./*.sha256
+  fi
 )
 ```
 
