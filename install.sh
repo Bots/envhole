@@ -49,15 +49,23 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-for command_name in curl tar sha256sum mktemp chmod mkdir mv uname wc; do
+for command_name in curl tar mktemp chmod mkdir mv uname wc; do
   need "$command_name"
 done
 
-[ "$(uname -s)" = Linux ] || fail "prebuilt releases currently support Linux only"
-case "$(uname -m)" in
-  x86_64|amd64) TARGET=x86_64-unknown-linux-musl ;;
-  aarch64|arm64) TARGET=aarch64-unknown-linux-musl ;;
-  *) fail "unsupported CPU architecture: $(uname -m)" ;;
+SYSTEM=$(uname -s)
+ARCHITECTURE=$(uname -m)
+case "$SYSTEM:$ARCHITECTURE" in
+  Linux:x86_64|Linux:amd64) TARGET=x86_64-unknown-linux-musl ;;
+  Linux:aarch64|Linux:arm64) TARGET=aarch64-unknown-linux-musl ;;
+  Darwin:x86_64|Darwin:amd64) TARGET=x86_64-apple-darwin ;;
+  Darwin:arm64|Darwin:aarch64) TARGET=aarch64-apple-darwin ;;
+  *) fail "unsupported platform: $SYSTEM $ARCHITECTURE" ;;
+esac
+
+case "$SYSTEM" in
+  Linux) need sha256sum ;;
+  Darwin) need shasum ;;
 esac
 
 if [ -z "$VERSION" ]; then
@@ -111,10 +119,12 @@ IFS=' ' read -r expected_digest expected_file unexpected < "$DOWNLOAD_DIR/$CHECK
 case "$expected_digest" in
   *[!0-9a-fA-F]*) fail "release checksum was not SHA-256" ;;
 esac
-(
-  cd "$DOWNLOAD_DIR"
-  sha256sum -c "$CHECKSUM"
-) || fail "release checksum verification failed"
+case "$SYSTEM" in
+  Linux) actual_checksum=$(sha256sum "$DOWNLOAD_DIR/$ARCHIVE") ;;
+  Darwin) actual_checksum=$(shasum -a 256 "$DOWNLOAD_DIR/$ARCHIVE") ;;
+esac
+actual_digest=${actual_checksum%% *}
+[ "$actual_digest" = "$expected_digest" ] || fail "release checksum verification failed"
 
 mkdir -p -- "$INSTALL_DIR"
 [ ! -d "$INSTALL_DIR/envhole" ] ||
@@ -130,8 +140,10 @@ actual_version=$("$DESTINATION_TMP" --version) || fail "downloaded binary did no
 
 [ ! -d "$INSTALL_DIR/envhole" ] ||
   fail "installation target became a directory: $INSTALL_DIR/envhole"
-mv -fT -- "$DESTINATION_TMP" "$INSTALL_DIR/envhole" ||
-  fail "could not replace $INSTALL_DIR/envhole"
+case "$SYSTEM" in
+  Linux) mv -fT -- "$DESTINATION_TMP" "$INSTALL_DIR/envhole" ;;
+  Darwin) mv -fh "$DESTINATION_TMP" "$INSTALL_DIR/envhole" ;;
+esac || fail "could not replace $INSTALL_DIR/envhole"
 DESTINATION_TMP=
 
 printf 'Installed EnvHole %s to %s/envhole\n' "$VERSION" "$INSTALL_DIR"
