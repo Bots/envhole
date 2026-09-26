@@ -4,7 +4,43 @@ A small Rust CLI for transferring one UTF-8 .env payload using
 [magic-wormhole](https://docs.rs/magic-wormhole/0.8.1/magic_wormhole/).
 No accounts, telemetry, analytics, secret database, or custom cryptography.
 
-## Build
+## Install
+
+On x86-64 or ARM64 Linux, install the latest published release to
+`$HOME/.local/bin`:
+
+```sh
+(
+  installer=$(mktemp) || exit
+  trap 'rm -f "$installer"' 0
+  curl --proto '=https' --proto-redir '=https' --tlsv1.2 -LsSf \
+    https://github.com/Bots/envhole/releases/latest/download/install.sh \
+    --output "$installer" || exit
+  sh "$installer"
+)
+```
+
+The installer itself is served as an immutable GitHub Release asset. It detects
+the CPU architecture, downloads the static binary and its SHA-256 file from the
+same release, verifies the checksum and binary version, and only then replaces
+an existing installation. To inspect it first, download the same URL, read the
+file, and run it with `sh`.
+
+The checksum detects corruption or truncation, but it is delivered through the
+same GitHub release as the archive. The installer therefore trusts GitHub HTTPS
+and the repository's immutable releases; use `gh release verify` when you need
+to verify GitHub's release attestation independently.
+
+Pin a release or choose another destination when running a downloaded copy:
+
+```sh
+ENVHOLE_VERSION=v0.1.0 ENVHOLE_INSTALL_DIR=/usr/local/bin sh ./install.sh
+```
+
+The destination must be writable; the installer does not invoke `sudo`.
+Ensure `$HOME/.local/bin` is on `PATH`, then run `envhole --version`.
+
+## Build from source
 
 Install current stable Rust, then:
 
@@ -13,11 +49,11 @@ cargo build --release --locked
 # binary: target/release/envhole
 ```
 
-## Install a release
+## Install a release manually
 
 Tagged releases publish native Linux archives for x86-64 workstations and
-ARM64 systems such as a 64-bit Raspberry Pi. For this private repository, use
-an authenticated GitHub CLI to download the matching archive:
+ARM64 systems such as a 64-bit Raspberry Pi. Use the GitHub CLI to download
+the matching archive manually:
 
 ```sh
 VERSION=v0.1.0

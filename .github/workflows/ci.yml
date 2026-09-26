@@ -13,6 +13,14 @@ jobs:
       - run: cargo fmt --check
       - run: cargo clippy --locked --all-targets --all-features -- -D warnings
       - run: cargo test --locked --all-targets
+      - run: sh -n install.sh tests/install.sh
+      - run: sh tests/install.sh
+      - run: >-
+          docker run --rm
+          --volume "$PWD:/work:ro"
+          --workdir /work
+          alpine@sha256:5291449c3df73caf6ed85e649dec1b9e818b39a5d8c871e97afc13e9cd5e8fa8
+          sh tests/install.sh
       - run: docker compose -f deploy/server/compose.yml config --quiet
       - run: docker compose -f deploy/server/compose.yml up -d --build --wait
       - run: >-

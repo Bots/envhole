@@ -2,7 +2,8 @@
 
 Releases are built by GitHub Actions from an annotated semantic-version tag on
 `main`. The workflow publishes statically linked Linux archives for x86-64 and
-ARM64 together with a SHA-256 checksum for each archive. Repository release
+ARM64 together with a SHA-256 checksum for each archive and the public
+`install.sh` bootstrapper. Repository release
 immutability must remain enabled so published tags, assets, and automatically
 generated release attestations cannot be replaced.
 
