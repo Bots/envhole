@@ -96,6 +96,7 @@ sh "$ROOT/install.sh" >/dev/null
 MAC_PACKAGE=envhole-v0.1.0-aarch64-apple-darwin
 MAC_ARCHIVE=$MAC_PACKAGE.tar.gz
 REAL_MV=$(command -v mv)
+REAL_SHA256SUM=$(command -v sha256sum)
 mkdir -p "$FIXTURES/$MAC_PACKAGE" "$TMP_ROOT/mac-install"
 cp "$FIXTURES/$PACKAGE/envhole" "$FIXTURES/$MAC_PACKAGE/envhole"
 tar -C "$FIXTURES" -czf "$FIXTURES/$MAC_ARCHIVE" "$MAC_PACKAGE"
@@ -118,9 +119,17 @@ shift
 exec "$ENVHOLE_TEST_REAL_MV" -fT -- "$@"
 SCRIPT
 chmod 0755 "$MOCK_BIN/mv"
+cat > "$MOCK_BIN/shasum" <<'SCRIPT'
+#!/bin/sh
+[ "${1:-}" = '-a' ] && [ "${2:-}" = '256' ] || exit 2
+shift 2
+exec "$ENVHOLE_TEST_REAL_SHA256SUM" "$@"
+SCRIPT
+chmod 0755 "$MOCK_BIN/shasum"
 PATH="$MOCK_BIN:$PATH" \
 ENVHOLE_TEST_FIXTURES="$FIXTURES" \
 ENVHOLE_TEST_REAL_MV="$REAL_MV" \
+ENVHOLE_TEST_REAL_SHA256SUM="$REAL_SHA256SUM" \
 ENVHOLE_VERSION=v0.1.0 \
 ENVHOLE_INSTALL_DIR="$TMP_ROOT/mac-install" \
 sh "$ROOT/install.sh" >/dev/null
@@ -133,7 +142,7 @@ case "${1:-}" in
   *) exit 2 ;;
 esac
 SCRIPT
-rm -f "$MOCK_BIN/mv"
+rm -f "$MOCK_BIN/mv" "$MOCK_BIN/shasum"
 
 rm -f "$INSTALL_DIR/envhole"
 mkdir "$INSTALL_DIR/envhole"
