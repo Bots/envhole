@@ -9,6 +9,12 @@ The vendored copy adds a pre-allocation 1 MiB ceiling to the peer-declared
 transit-record length and includes a hostile-frame regression test. No
 cryptographic code is changed.
 
+The sender and receiver each apply a 600-second deadline to their complete
+network operation: rendezvous, PAKE, transit negotiation, and byte transfer.
+Users may select 1–86,400 seconds with `--timeout-seconds` or
+`ENVHOLE_TIMEOUT_SECONDS`. Local sender approval happens before the deadline;
+receiver review and saving happen after it.
+
 1. Sender reads at most 1 MiB plus one sentinel byte, validates metadata,
    displays only names/count, and obtains approval.
 2. `MailboxConnection::create` allocates a nameplate and a password containing

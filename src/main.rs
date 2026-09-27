@@ -7,7 +7,7 @@ mod ui;
 use anyhow::{Result, bail};
 use clap::{Parser, Subcommand};
 use envhole::{check_target, manifest, read_confirmation, read_payload};
-use std::{io, path::PathBuf};
+use std::{future::Future, io, path::PathBuf, time::Duration};
 
 #[derive(Parser)]
 #[command(version, about = "Transfer .env secrets with Magic Wormhole")]
@@ -28,6 +28,15 @@ struct Cli {
         default_value = transport::DEFAULT_TRANSIT_RELAY
     )]
     transit_relay: String,
+    /// Maximum time for one network transfer, in seconds
+    #[arg(
+        long,
+        global = true,
+        env = "ENVHOLE_TIMEOUT_SECONDS",
+        default_value_t = 600,
+        value_parser = clap::value_parser!(u64).range(1..=86_400)
+    )]
+    timeout_seconds: u64,
     #[command(subcommand)]
     command: Commands,
 }
@@ -76,8 +85,20 @@ fn confirm(yes: bool, stdin_payload: bool, message: &str) -> Result<()> {
     Ok(())
 }
 
+async fn with_network_timeout<T>(
+    operation: impl Future<Output = Result<T>>,
+    timeout: Duration,
+) -> Result<T> {
+    futures_lite::future::race(operation, async move {
+        async_io::Timer::after(timeout).await;
+        bail!("network transfer timed out")
+    })
+    .await
+}
+
 async fn run(cli: Cli) -> Result<()> {
     let transport = transport::Config::new(&cli.rendezvous_url, &cli.transit_relay)?;
+    let network_timeout = Duration::from_secs(cli.timeout_seconds);
     match cli.command {
         Commands::Send {
             path,
@@ -97,7 +118,11 @@ async fn run(cli: Cli) -> Result<()> {
             ui::banner("Secure send");
             ui::payload_preview(&names, bytes.len());
             confirm(yes, stdin_payload, "Send this protected payload?")?;
-            transport::send(&bytes, &transport, code_words).await?;
+            with_network_timeout(
+                transport::send(&bytes, &transport, code_words),
+                network_timeout,
+            )
+            .await?;
         }
         Commands::Receive {
             code,
@@ -107,7 +132,9 @@ async fn run(cli: Cli) -> Result<()> {
         } => {
             check_target(&output, force)?;
             ui::banner("Secure receive");
-            let bytes = transport::receive(&code, &transport).await?;
+            let bytes =
+                with_network_timeout(transport::receive(&code, &transport), network_timeout)
+                    .await?;
             let payload_size = bytes.len();
             envhole::save_received(&bytes, &output, force, |names| {
                 ui::payload_preview(names, payload_size);
@@ -128,5 +155,34 @@ fn main() {
     if let Err(error) = futures_lite::future::block_on(run(Cli::parse())) {
         eprintln!("Error: {error}");
         std::process::exit(1);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::with_network_timeout;
+    use std::{future::pending, time::Duration};
+
+    #[test]
+    fn network_timeout_stops_a_stalled_operation() {
+        let result = futures_lite::future::block_on(with_network_timeout(
+            pending::<anyhow::Result<()>>(),
+            Duration::from_millis(5),
+        ));
+
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "network transfer timed out"
+        );
+    }
+
+    #[test]
+    fn network_timeout_returns_completed_result() {
+        let result = futures_lite::future::block_on(with_network_timeout(
+            async { Ok::<_, anyhow::Error>("done") },
+            Duration::from_secs(1),
+        ));
+
+        assert_eq!(result.unwrap(), "done");
     }
 }

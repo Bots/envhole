@@ -1,6 +1,9 @@
 use std::{
     io::Write,
+    net::TcpListener,
     process::{Command, Stdio},
+    thread,
+    time::{Duration, Instant},
 };
 fn bin() -> Command {
     Command::new(env!("CARGO_BIN_EXE_envhole"))
@@ -13,6 +16,58 @@ fn help_describes_commands() {
     let text = String::from_utf8_lossy(&out.stdout);
     assert!(text.contains("send") && text.contains("receive"));
     assert!(text.contains("--rendezvous-url") && text.contains("--transit-relay"));
+    assert!(text.contains("--timeout-seconds") && text.contains("default: 600"));
+}
+
+#[test]
+fn network_timeout_is_bounded() {
+    for invalid in ["0", "86401"] {
+        let out = bin()
+            .args([
+                "--timeout-seconds",
+                invalid,
+                "send",
+                "/path/that/does/not/exist",
+                "--yes",
+            ])
+            .output()
+            .unwrap();
+        assert!(!out.status.success());
+        assert!(String::from_utf8_lossy(&out.stderr).contains("1..=86400"));
+    }
+}
+
+#[test]
+fn network_timeout_stops_a_stalled_rendezvous() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let address = listener.local_addr().unwrap();
+    let server = thread::spawn(move || {
+        let (_connection, _) = listener.accept().unwrap();
+        thread::sleep(Duration::from_secs(2));
+    });
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("input.env");
+    std::fs::write(&path, b"A=secret\n").unwrap();
+
+    let started = Instant::now();
+    let out = bin()
+        .args([
+            "--rendezvous-url",
+            &format!("ws://{address}/v1"),
+            "--timeout-seconds",
+            "1",
+            "send",
+        ])
+        .arg(path)
+        .arg("--yes")
+        .output()
+        .unwrap();
+    let elapsed = started.elapsed();
+    server.join().unwrap();
+
+    assert!(!out.status.success());
+    assert!(String::from_utf8_lossy(&out.stderr).contains("network transfer timed out"));
+    assert!(elapsed < Duration::from_millis(1900));
 }
 
 #[test]
