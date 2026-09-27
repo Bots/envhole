@@ -18,6 +18,10 @@ Magic Wormhole uses its password-authenticated exchange to establish an
 authenticated encrypted channel, then encrypted transit for the payload.
 EnvHole uses the maintained crate rather than implementing cryptographic steps.
 It does not treat possession of the code as a verified human identity.
+EnvHole defaults to four random code words (32 bits); the sender may explicitly
+choose 2–6. PAKE prevents offline guessing from captured traffic, but shorter
+codes have less resistance to online guesses through a malicious or weakly
+rate-limited rendezvous service.
 
 An unauthenticated/incorrect peer cannot normally decrypt a successful transfer.
 A peer with the code can receive or supply content. EnvHole treats received

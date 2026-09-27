@@ -46,6 +46,11 @@ fn two_process_exact_byte_transfer() {
     let code = rx
         .recv_timeout(Duration::from_secs(45))
         .expect("sender did not produce a code within 45 seconds");
+    assert_eq!(
+        code.split('-').count(),
+        5,
+        "code should contain one nameplate and four words"
+    );
     let mut receiver = Process(
         Command::new(env!("CARGO_BIN_EXE_envhole"))
             .args(["receive", &code, "--yes", "--output"])

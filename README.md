@@ -97,20 +97,24 @@ envhole send .env
 # compact transfer receipt. The result includes both the temporary code and a
 # complete receiver command:
 #
-# Code: 7-example-words
+# Code: 7-example-only-not-real
 # ╭─ COPY ON THE RECEIVING MACHINE
-# │ ENVHOLE_RENDEZVOUS_URL='ws://server:4000/v1' ENVHOLE_TRANSIT_RELAY='tcp://server:4001' envhole receive '7-example-words' --output .env.received
+# │ ENVHOLE_RENDEZVOUS_URL='ws://server:4000/v1' ENVHOLE_TRANSIT_RELAY='tcp://server:4001' envhole receive '7-example-only-not-real' --output .env.received
 # ╰─
 ```
 
 Receiver:
 
 ```sh
-envhole receive 7-example-words --output .env.received
+envhole receive 7-example-only-not-real --output .env.received
 # Receives into memory, displays names/count, asks before saving.
 ```
 
-The example code is a placeholder; use the sender's generated code.
+The example code is a placeholder; use the sender's generated code. EnvHole
+uses four random words by default (32 bits from the 256-word PGP lists). Senders
+can choose 2–6 words with `--code-words`; shorter codes trade online-guessing
+resistance for easier manual entry. Magic Wormhole's PAKE prevents captured
+traffic from enabling offline code guesses.
 Treat the code as a temporary secret. It is printed to stdout for sharing.
 Do not post it publicly. The generated command contains that code and may be
 saved in the receiver's shell history; use it only on the intended receiver
@@ -135,7 +139,7 @@ For automation:
 
 ```sh
 cat .env | envhole send - --yes
-envhole receive 7-example-words --output .env.received --yes
+envhole receive 7-example-only-not-real --output .env.received --yes
 # Add --force to replace an existing regular file.
 ```
 
@@ -204,6 +208,5 @@ and compares original and saved bytes. It is ignored by default so offline CI
 does not rely on a public service. CI starts the Compose services and runs this
 test against them. It was also exercised successfully against the public
 service during v0.1 development. Local tests cover parsing, limits, previews,
-CLI validation, confirmation refusal, symlink refusal, replacement, and Unix
-permissions. The suite currently contains 15 non-network tests plus the
-opt-in network smoke test.
+CLI validation, code-word bounds, confirmation refusal, symlink refusal,
+replacement, and Unix permissions, plus the opt-in network smoke test.

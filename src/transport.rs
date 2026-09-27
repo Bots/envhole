@@ -6,6 +6,7 @@ use std::{borrow::Cow, future::pending};
 
 pub const DEFAULT_RENDEZVOUS_URL: &str = magic_wormhole::rendezvous::DEFAULT_RENDEZVOUS_SERVER;
 pub const DEFAULT_TRANSIT_RELAY: &str = transit::DEFAULT_RELAY_SERVER;
+pub const DEFAULT_CODE_WORDS: u8 = 4;
 
 pub struct Config {
     app: AppConfig<transfer::AppVersion>,
@@ -61,9 +62,9 @@ fn shell_quote(value: &str) -> String {
 }
 
 // Do not expose library errors: peer-controlled messages can contain secret text.
-pub async fn send(bytes: &[u8], config: &Config) -> Result<()> {
+pub async fn send(bytes: &[u8], config: &Config, code_words: u8) -> Result<()> {
     ui::step("Connecting to the rendezvous server…");
-    let mailbox = MailboxConnection::create(config.app.clone(), 2)
+    let mailbox = MailboxConnection::create(config.app.clone(), usize::from(code_words))
         .await
         .map_err(|_| anyhow!("could not create rendezvous connection"))?;
     let code = mailbox.code().to_string();
