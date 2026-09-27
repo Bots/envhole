@@ -135,6 +135,11 @@ The equivalent global flags are `--rendezvous-url` and `--transit-relay`.
 A Raspberry Pi Docker Compose deployment is provided in
 [`deploy/server`](deploy/server/README.md).
 
+Each send or receive network operation has a 600-second deadline so an absent
+or stalled peer cannot hold the process forever. Set `--timeout-seconds N` or
+`ENVHOLE_TIMEOUT_SECONDS=N` to choose 1–86,400 seconds. The deadline begins
+after sender approval and does not include receiver review or file saving.
+
 For automation:
 
 ```sh
@@ -172,7 +177,8 @@ approved saving them.
   non-regular targets are refused. Use a trusted destination directory;
   protection against an attacker replacing parent directories is out of scope.
 * No folders, resume, stored history, or guaranteed
-  cancellation cleanup on forced termination. Ctrl-C exits. A crash while
+  cancellation cleanup on forced termination. Ctrl-C exits, and stalled network
+  operations stop after 600 seconds by default. A crash while
   saving may leave a private temporary file. Memory is not guaranteed zeroized.
 * Unix permissions are tested on Linux. Windows ACL guarantees are not provided.
   Parent-directory fsync/power-loss durability is not promised.
@@ -183,8 +189,7 @@ approved saving them.
 * Uses the standard file-transfer application ID and defaults to public
   infrastructure. Rendezvous and transit URLs can be replaced together for a
   self-hosted deployment. Compatible peers can offer arbitrary files; EnvHole
-  validates before saving. Connections may wait until interrupted if a peer
-  does not complete the handshake.
+  validates before saving.
 
 See [security policy](SECURITY.md), [threat model](docs/threat-model.md),
 and [protocol](docs/protocol.md).

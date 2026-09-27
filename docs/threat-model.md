@@ -48,8 +48,10 @@ default. Atomic visibility is distinct from durability across power loss.
 The vendored magic-wormhole patch rejects peer-declared transit records above
 1 MiB before allocation. The cap still does not cover every allocation in the
 networking library or total process memory. Malicious peers can stall
-connections or consume resources elsewhere in protocol processing. There is no
-application-wide timeout, rate limiter, or hardened hostile-server sandbox.
+connections or consume resources elsewhere in protocol processing. EnvHole
+bounds each network operation to 600 seconds by default (configurable from
+1–86,400 seconds), but has no application rate limiter or hardened
+hostile-server sandbox.
 
 The public rendezvous uses the crate's default URL (currently ws, not wss).
 Payload confidentiality/authentication relies on Magic Wormhole's end-to-end

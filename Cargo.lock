@@ -757,6 +757,7 @@ name = "envhole"
 version = "0.2.0"
 dependencies = [
  "anyhow",
+ "async-io",
  "clap",
  "futures-lite",
  "magic-wormhole",
